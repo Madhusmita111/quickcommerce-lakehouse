@@ -1,543 +1,169 @@
-# QuickCommerce Lakehouse
-### Real-Time CDC-to-Lakehouse Platform for Modern Retail Analytics
+# QuickCommerce Lakehouse (QuickLake)
 
-<p align="center">
+**Real-Time CDC-to-Lakehouse Platform for Modern Retail Analytics**
 
-![Python](https://img.shields.io/badge/Python-3.11-blue)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)
-![Apache Spark](https://img.shields.io/badge/Apache%20Spark-3.x-orange)
-![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-2.x-red)
-![Apache Iceberg](https://img.shields.io/badge/Apache-Iceberg-0A5B94)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED)
-![CDC](https://img.shields.io/badge/CDC-OLake-success)
-![Lakehouse](https://img.shields.io/badge/Architecture-Lakehouse-brightgreen)
-![License](https://img.shields.io/badge/License-MIT-green)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Apache Spark](https://img.shields.io/badge/Apache_Spark-E25A1C?style=for-the-badge&logo=apachespark&logoColor=white)]()
+[![Apache Iceberg](https://img.shields.io/badge/Apache_Iceberg-1E90FF?style=for-the-badge)]()
+[![Airflow](https://img.shields.io/badge/Apache_Airflow-017CEE?style=for-the-badge&logo=apacheairflow&logoColor=white)]()
 
-</p>
+> A production-inspired real-time data engineering project that captures transactional changes from PostgreSQL using CDC and continuously builds an analytics-ready **Apache Iceberg Lakehouse**.
 
 ---
 
 ## Overview
 
-**QuickLake** is a production-inspired **real-time data engineering platform** that captures transactional database changes using **Change Data Capture (CDC)** and continuously builds an analytics-ready **Apache Iceberg Lakehouse** without impacting the source application.
+QuickLake streams live business events from a simulated Quick Commerce platform into a scalable, analytics-ready Lakehouse — **without impacting the source OLTP system**.
 
-Instead of relying on slow nightly ETL jobs or running expensive analytical queries against production databases, QuickLake streams live business events into a scalable Lakehouse where they can be transformed, validated, and queried independently.
+Instead of slow nightly ETL jobs or running expensive queries on production databases, QuickLake delivers near real-time insights using modern Data Engineering best practices.
 
-The project demonstrates modern Data Engineering concepts including:
-
-- Real-Time Change Data Capture
+**Key Concepts Demonstrated**:
+- Real-Time Change Data Capture (CDC)
 - Apache Iceberg Lakehouse
-- Spark ETL
+- Spark ETL (deduplication, schema evolution, aggregations)
 - Airflow Workflow Orchestration
 - Data Quality Validation
-- Schema Evolution
-- Partition Optimization
-- Docker-based Infrastructure
-
-Rather than using a static CSV dataset, the project simulates a real Quick Commerce company where orders, payments, deliveries, cancellations, refunds, and inventory updates continuously flow through the pipeline.
+- Partition Optimization & Incremental Processing
+- Schema Evolution without downtime
+- Docker-based reproducible infrastructure
 
 ---
 
-# Problem Statement
+## Problem Statement
 
-Modern applications generate thousands of transactions every minute.
+Modern applications generate thousands of transactions per minute, yet many organizations still:
+- Run BI dashboards directly on production databases
+- Execute heavy analytical queries on OLTP systems
+- Rely on stale nightly batch jobs
+- Struggle with schema changes breaking pipelines
 
-Unfortunately, many organizations still:
+This leads to increased latency, poor application performance, outdated insights, and low data reliability.
 
-- Run BI dashboards directly against production databases.
-- Execute expensive analytical queries on OLTP systems.
-- Depend on nightly ETL jobs.
-- Work with stale business data.
-- Experience broken pipelines whenever schemas change.
-
-These approaches create several problems:
-
-- Increased database latency
-- Poor application performance
-- Outdated dashboards
-- Difficult schema management
-- Low data reliability
-
-QuickLake demonstrates how a modern CDC-driven Lakehouse architecture solves these challenges.
+QuickLake shows how a **CDC-driven Lakehouse architecture** solves these challenges.
 
 ---
 
-# Solution
+## Solution & Architecture
 
-QuickLake separates operational workloads from analytical workloads.
+![Architecture](docs/architecture.png)
 
-Instead of querying the production PostgreSQL database, all database changes are streamed into Apache Iceberg where Spark transforms the data into analytics-ready tables.
+**End-to-End Pipeline**:
+Customer Order → PostgreSQL (OLTP) → OLake CDC → Apache Iceberg → Spark ETL →
+Data Validation → Airflow Orchestration → Analytics-Ready Tables → Power BI / Trino / SQL
+text---
 
-The production application remains unaffected while business teams receive near real-time insights.
+## Business Domain
 
----
+The project simulates a fast-paced **Quick Commerce company** (similar to Blinkit, Zepto, Instamart, or DoorDash).
 
-# Architecture
+**Core Business Entities**:
 
-```
-                    +-------------------------------+
-                    |   Python Traffic Generator    |
-                    |-------------------------------|
-                    | Orders                        |
-                    | Inventory                     |
-                    | Payments                      |
-                    | Returns                       |
-                    | Deliveries                    |
-                    +---------------+---------------+
-                                    |
-                           INSERT / UPDATE / DELETE
-                                    |
-                                    ▼
-                    +-------------------------------+
-                    |      PostgreSQL (OLTP)        |
-                    |-------------------------------|
-                    | Customers                     |
-                    | Orders                        |
-                    | Inventory                     |
-                    | Payments                      |
-                    | Returns                       |
-                    | Delivery Partners             |
-                    +---------------+---------------+
-                                    |
-                         WAL / Logical Replication
-                                    |
-                                    ▼
-                    +-------------------------------+
-                    |           OLake               |
-                    |     CDC Connector             |
-                    +---------------+---------------+
-                                    |
-                                    ▼
-                    +-------------------------------+
-                    |     Apache Iceberg            |
-                    |        Lakehouse              |
-                    |       S3 / MinIO              |
-                    +---------------+---------------+
-                                    |
-                                    ▼
-                    +-------------------------------+
-                    |        Apache Spark           |
-                    |-------------------------------|
-                    | ETL                           |
-                    | Deduplication                 |
-                    | Schema Evolution              |
-                    | Aggregations                  |
-                    | Compaction                    |
-                    +---------------+---------------+
-                                    |
-                                    ▼
-                    +-------------------------------+
-                    |      Apache Airflow           |
-                    |-------------------------------|
-                    | DAG Scheduling                |
-                    | Validation                    |
-                    | Retry                         |
-                    | Logging                       |
-                    +---------------+---------------+
-                                    |
-                                    ▼
-                    +-------------------------------+
-                    | Analytics Ready Iceberg Tables|
-                    +-------------------------------+
-```
+| Table                | Description                          |
+|----------------------|--------------------------------------|
+| Customers            | Customer profiles                    |
+| Orders               | Complete order lifecycle             |
+| Inventory            | Warehouse stock levels               |
+| Payments             | Payment transactions                 |
+| Returns              | Refund & return requests             |
+| Delivery Partners    | Delivery tracking & performance      |
+
+**Live Traffic Includes**:
+- New orders & confirmations
+- Cancellations & payment failures
+- Refunds, inventory updates, delivery delays
 
 ---
 
-# End-to-End Pipeline
+## Production Engineering Scenarios
 
-```
-Customer Places Order
-
-        │
-
-        ▼
-
- PostgreSQL
-
-        │
-
-   CDC (OLake)
-
-        │
-
-        ▼
-
-Apache Iceberg
-
-        │
-
-        ▼
-
- Apache Spark
-
-        │
-
-        ▼
-
- Data Validation
-
-        │
-
-        ▼
-
- Airflow
-
-        │
-
-        ▼
-
- Analytics Tables
-
-        │
-
-        ▼
-
- Power BI / SQL / Trino
-```
+- **Schema Evolution**: New `customer_phone` column added live. Iceberg evolves the schema automatically.
+- **Duplicate CDC Events**: Intentionally generated and cleaned by Spark (see `docs/dedup-results.md`).
+- **Partition Optimization**: Iceberg tables partitioned by `year/month/day`.
+- **Incremental Processing**: Only new changes are processed.
+- **Data Quality Validation**: Airflow DAG validates nulls, PK/FK integrity, cross-table consistency, and row count anomalies.
 
 ---
 
-# Business Domain
+## Project Structure
 
-The project simulates a **10-minute Quick Commerce company** similar to Blinkit, Zepto, Instamart, or DoorDash.
 
-## Core Business Entities
-
-| Table | Description |
-|--------|-------------|
-| Customers | Customer information |
-| Orders | Complete order lifecycle |
-| Inventory | Warehouse stock |
-| Payments | Payment transactions |
-| Returns | Refund requests |
-| Delivery Partners | Delivery tracking |
-
-The traffic generator continuously produces:
-
-- New Orders
-- Order Confirmations
-- Order Cancellations
-- Payment Failures
-- Refund Requests
-- Inventory Updates
-- Delivery Delays
-
-creating realistic production-like workloads.
-
----
-
-# Production Engineering Scenarios
-
-## Schema Evolution
-
-A new column
-
-```
-customer_phone
-```
-
-is added while the pipeline is running.
-
-Apache Iceberg automatically evolves the schema without requiring table recreation or pipeline downtime.
-
----
-
-## Duplicate CDC Events
-
-Duplicate events are intentionally generated.
-
-Spark removes duplicates before data reaches analytics tables.
-
-The repository includes before/after row counts.
-
----
-
-## Partition Optimization
-
-Iceberg tables are partitioned using
-
-```
-Year
-Month
-Day
-```
-
-to improve scan performance and reduce query costs.
-
----
-
-## Incremental Processing
-
-Only new CDC events are processed.
-
-Historical data is never reloaded unnecessarily.
-
----
-
-## Data Quality Validation
-
-Every Airflow execution validates:
-
-- Null values
-- Duplicate Orders
-- Primary Key uniqueness
-- Foreign Key integrity
-- Unexpected row count changes
-- Payment ↔ Order consistency
-- Return ↔ Payment consistency
-
-Pipeline failures are logged and retried automatically.
-
----
-
-# Example Analytical Queries
-
-QuickLake enables queries such as:
-
-- Total Sales Today
-- Revenue by Category
-- Hourly Order Volume
-- Cancellation Rate
-- Refund Percentage
-- Average Delivery Time
-- Inventory Turnover
-- Top Selling Products
-- Delivery Partner Performance
-- Payment Success Rate
-
----
-
-# Technology Stack
-
-| Layer | Technology |
-|---------|------------|
-| Programming | Python |
-| Database | PostgreSQL |
-| CDC | OLake |
-| Lakehouse | Apache Iceberg |
-| Processing | Apache Spark |
-| Workflow | Apache Airflow |
-| Storage | MinIO / AWS S3 |
-| Infrastructure | Docker |
-| Version Control | Git |
-| Analytics | Spark SQL |
-
----
-
-# Project Structure
-
-```
-quicklake/
-
-├── airflow/
-├── cdc/
-├── db/
-├── docs/
-├── notebooks/
-├── spark_jobs/
-├── tests/
-├── traffic_generator/
+quickcommerce-lakehouse/
+├── data_replayer/          # Olist dataset download + realistic replay engine
+├── db/                     # Schema init & migrations (incl. schema evolution)
+├── cdc/                    # OLake CDC configuration
+├── spark_jobs/             # ETL jobs (dedup, aggregations, compaction)
+├── airflow/                # DAGs + custom data quality plugins
+├── tests/                  # Unit & integration tests
+├── docs/                   # Architecture, results, schema mapping
+├── notebooks/              # Exploratory analytics
+├── data/                   # Raw data (gitignored)
 ├── docker-compose.yml
+├── .env.example
 ├── requirements.txt
 └── README.md
-```
 
----
+Getting Started
+1. Clone the Repository
+Bashgit clone https://github.com/<username>/quickcommerce-lakehouse.git
+cd quickcommerce-lakehouse
+2. Environment Setup
+Bashcp .env.example .env
+# Edit .env with your credentials (Postgres, MinIO, etc.)
+3. Start Infrastructure
+Bashdocker compose up -d
+Services: PostgreSQL, MinIO, Spark, Airflow
+4. Load & Replay Data
+Bash# Download Olist dataset
+python data_replayer/download_dataset.py
 
-# Getting Started
+# Start realistic replay (simulates live traffic)
+python data_replayer/replay_engine.py
+5. Configure & Start CDC
 
-## Clone Repository
+Update cdc/olake_config.yaml
+Start the OLake connector
 
-```bash
-git clone https://github.com/<username>/quicklake.git
+6. Run the Pipeline
 
-cd quicklake
-```
+Open Airflow UI: http://localhost:8080
+Enable and trigger quickcommerce_pipeline
 
----
 
-## Configure Environment
+Demo
+<img src="docs/architecture.png" alt="Architecture">
+<img src="docs/demo.gif" alt="Demo GIF">
+(Screenshots: Airflow DAG, Spark Jobs, Iceberg Tables, Sample Dashboard)
+Sample Analytics Queries
 
-```bash
-cp .env.example .env
-```
+Total Sales Today / Revenue by Category
+Hourly Order Volume & Cancellation Rate
+Average Delivery Time & Delivery Partner Performance
+Refund Percentage & Inventory Turnover
+Top Selling Products & Payment Success Rate
 
-Update
+Explore live in notebooks/exploratory_queries.ipynb
+Testing
+Bashpytest
+Tests cover schema evolution, deduplication, data quality rules, and ETL logic.
 
-- PostgreSQL credentials
-- MinIO endpoint
-- Iceberg catalog
-- Airflow variables
+Key Learnings & Resume Highlights
 
----
+Designed a real-time CDC pipeline using OLake to stream PostgreSQL changes into Apache Iceberg.
+Built Spark ETL jobs for deduplication, schema evolution, incremental processing, and aggregations.
+Automated orchestration, retries, and comprehensive data quality validation with Apache Airflow.
+Simulated production-scale Quick Commerce workloads using a configurable replay engine based on real Olist data.
+Implemented a fully Dockerized, production-inspired Lakehouse architecture.
 
-## Start Infrastructure
-
-```bash
-docker compose up -d
-```
-
-Services started:
-
-- PostgreSQL
-- MinIO
-- Spark
-- Airflow
-
----
-
-## Generate Live Traffic
-
-```bash
-python traffic_generator/generator.py
-```
-
-This continuously creates realistic business events.
-
----
-
-## Configure CDC
-
-Configure OLake using
-
-```
-cdc/olake_config.yaml
-```
-
-Start the connector.
-
----
-
-## Execute Airflow DAG
-
-Open
-
-```
-http://localhost:8080
-```
-
-Enable
-
-```
-quicklake_pipeline
-```
-
-The DAG performs
-
-- CDC ingestion
-- Spark ETL
-- Data Validation
-- Aggregation
-
----
-
-# Sample Dashboard
-
-The Lakehouse can power dashboards showing:
-
-- Revenue Trends
-- Sales by Hour
-- Inventory Health
-- Delivery KPIs
-- Cancellation Analytics
-- Refund Analysis
-- Customer Growth
-
-*(Screenshots will be added after implementation.)*
-
----
-
-# Testing
-
-Unit tests validate
-
-- Schema Evolution
-- Deduplication
-- Data Quality Rules
-- ETL Logic
-
-Run
-
-```bash
-pytest
-```
-
----
-
-# Future Improvements
-
-- [x] CDC Pipeline
-- [x] Apache Iceberg
-- [x] Spark ETL
-- [x] Airflow DAG
-- [x] Data Quality Checks
-- [x] Schema Evolution
 
 Future Roadmap
 
-- [ ] Late Arriving Data
-- [ ] Iceberg Time Travel
-- [ ] CDC Recovery Testing
-- [ ] Great Expectations Integration
-- [ ] Pipeline Monitoring Dashboard
-- [ ] Trino Query Engine
-- [ ] Natural Language Analytics
-- [ ] Prometheus + Grafana Monitoring
-- [ ] AWS Deployment
+Late-arriving data handling & Iceberg Time Travel
+Great Expectations integration
+Trino query engine + Superset dashboards
+Pipeline monitoring with Prometheus + Grafana
+AWS / Cloud deployment
 
----
 
-# Key Learnings
-
-This project demonstrates practical experience with:
-
-- Real-Time Change Data Capture
-- Apache Iceberg Lakehouse
-- Spark-based ETL
-- Airflow Orchestration
-- Data Validation
-- Partition Optimization
-- Schema Evolution
-- Dockerized Infrastructure
-- Production-style Data Engineering
-
----
-
-# Resume Highlights
-
-- Designed a real-time CDC pipeline using OLake to capture PostgreSQL changes into Apache Iceberg.
-- Built Spark ETL jobs for deduplication, schema evolution, incremental processing, and daily aggregations.
-- Automated orchestration, retries, and data quality validation using Apache Airflow.
-- Simulated production-scale Quick Commerce traffic using a configurable Python event generator.
-- Built a production-inspired Lakehouse architecture using Docker, MinIO, PostgreSQL, Spark, and Iceberg.
-
----
-
-# Demo
-
-| Component | Preview |
-|------------|---------|
-| Architecture | docs/architecture.png |
-| Airflow DAG | docs/airflow.png |
-| Spark Jobs | docs/spark.png |
-| Iceberg Tables | docs/iceberg.png |
-| Dashboard | docs/dashboard.png |
-| Demo GIF | docs/demo.gif |
-
----
-
-# Contributing
-
-Contributions, suggestions, and improvements are welcome.
-
-Feel free to open an issue or submit a pull request.
-
----
-
-# License
-
-This project is licensed under the MIT License.
-
----
-
-> **Note:** This is a portfolio project built for learning and demonstration purposes. Business traffic is simulated using a Python event generator rather than real production users. All core infrastructure (PostgreSQL, OLake, Apache Iceberg, Spark, Airflow, Docker) is real and runs locally using containerized services. The project is designed to reflect production engineering practices while remaining reproducible on a personal development machine.
+Built with ❤️ for modern Data Engineering
+Feel free to explore, fork, or reach out with questions!
